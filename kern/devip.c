@@ -256,8 +256,13 @@ ipinit(void)
 {
 	osipinit();
 
+	#ifdef __EMSCRIPTEN__
+	newproto("ws", S_WS, 30);
+	newproto("wss", S_WSS, 30);
+#else
 	newproto("udp", S_UDP, 10);
 	newproto("tcp", S_TCP, 30);
+#endif
 
 	fmtinstall('I', eipfmt);
 	fmtinstall('E', eipfmt);
@@ -369,7 +374,11 @@ ipopen(Chan *c, int omode)
 		sfd = so_accept(lcv->sfd, raddr, &rport);
 		cv = protoclone(p, up->user, sfd);
 		if(cv == 0) {
+			#ifdef __EMSCRIPTEN__
+			so_close(sfd);
+#else
 			close(sfd);
+#endif
 			error(Enodev);
 		}
 		ipmove(cv->raddr, raddr);
@@ -408,7 +417,11 @@ ipclose(Chan *c)
 		ipzero(cc->raddr);
 		cc->lport = 0;
 		cc->rport = 0;
+#ifdef __EMSCRIPTEN__
+		so_close(cc->sfd);
+#else
 		close(cc->sfd);
+#endif
 		break;
 	}
 }
@@ -549,6 +562,17 @@ ipwrite(Chan *ch, void *a, long n, vlong offset)
 
 		nf = tokenize(buf, fields, 3);
 		if(strcmp(fields[0], "connect") == 0){
+#ifdef __EMSCRIPTEN__
+			if(c->p->stype == S_WS || c->p->stype == S_WSS){
+				if(nf != 2)
+					error("bad websocket connect args");
+				if(c->sfd == -1)
+					c->sfd = so_socket(c->p->stype, c->raddr);
+				so_connectws(c->sfd, fields[1], c->p->stype == S_WSS);
+				c->state = "Established";
+				return n;
+			}
+#endif
 			switch(nf) {
 			default:
 				error("bad args to connect");
@@ -841,6 +865,19 @@ cswrite(Chan *c, void *a, long n, vlong offset)
 	if(nf != 3)
 		error("can't translate");
 
+#ifdef __EMSCRIPTEN__
+	if(strcmp(f[0], "ws") == 0 || strcmp(f[0], "wss") == 0){
+		/* No IP/DNS lookup: /cpu is a URL path, not a service port. */
+		if(*f[1] == 0 || *f[2] == 0)
+			error("bad websocket address");
+		ns = smprint("/net/%s/clone %s!%s", f[0], f[1], f[2]);
+		free(c->aux);
+		c->aux = ns;
+		poperror();
+		free(s);
+		return n;
+	}
+#endif
 	port = lookupport(f[2]);
 	if(port <= 0)
 		error("no translation for port found");

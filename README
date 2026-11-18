@@ -24,6 +24,16 @@ USAGE
 -------
 On Android the five checkboxes at the top represent the three mouse buttons and mousewheel, determining which "buttons" are clicked. The "kb" button toggles the soft keyboard.
 
+WebAssembly
+-----------
+
+On WASM you have to serve gui-wasm/index.html along drawterm.js and drawterm.wasm. Threading must be enabled using COOP-
+and COEP-header shenanigans. More information at https://emscripten.org/docs/porting/pthreads.html.
+
+drawterm uses TCP-sockets to communicate with the destination. WASM does not support TCP-sockets directly but
+would use an emulation using WebSocket. To reach the destination directly, the "ws" and "wss"-network can be used:
+Address "ws!drawterm.example.org!cpu" translates to "ws://drawterm.example.org/cpu" and same for tunneled "wss".
+A websocket-proxy like "websockify" can be used to proxy the ports.
 
 CAVEATS
 --------

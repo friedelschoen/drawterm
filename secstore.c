@@ -26,6 +26,13 @@ enum{// PW status bits
 
 static char testmess[] = "__secstore\tPAK\nC=%s\nm=0\n";
 
+static char*
+mkaddr(char* a, char* proto, char* service) {
+    if (strchr(a, '!') != nil)
+        return a;
+    return netmkaddr(a, proto, service);
+}
+
 int
 secdial(char *secstore)
 {
@@ -58,7 +65,7 @@ secdial(char *secstore)
 			break;
 		}
 	}
-	fd = dial(netmkaddr(p, "tcp", "secstore"), 0, 0, 0);
+	fd = dial(mkaddr(p, "tcp", "secstore"), 0, 0, 0);
 	if(fd >= 0)
 		return fd;
 	return -1;

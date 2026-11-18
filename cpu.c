@@ -79,6 +79,13 @@ mountfactotum(void)
 	return 0;
 }
 
+static char*
+mkaddr(char* a, char* proto, char* service) {
+    if (strchr(a, '!') != nil)
+        return a;
+    return netmkaddr(a, proto, service);
+}
+
 static int
 startaan(char *host, int fd)
 {
@@ -156,7 +163,7 @@ rcpu(char *host, char *cmd)
 "echo -n hangup >/proc/$pid/notepg\n";
 	int fd;
 
-	if((fd = dial(netmkaddr(host, "tcp", "rcpu"), nil, nil, nil)) < 0)
+	if((fd = dial(mkaddr(host, "tcp", "rcpu"), nil, nil, nil)) < 0)
 		return;
 
 	/* provide /dev/kbd for kbdfs */
@@ -197,7 +204,7 @@ ncpu(char *host, char *cmd)
 	char buf[MaxStr];
 	int fd;
 
-	if((fd = dial(netmkaddr(host, "tcp", "ncpu"), nil, nil, nil)) < 0)
+	if((fd = dial(mkaddr(host, "tcp", "ncpu"), nil, nil, nil)) < 0)
 		return;
 
 	/* negotiate authentication mechanism */
@@ -539,7 +546,7 @@ p9authtls(int fd)
 int
 authdial(char *net, char *dom)
 {
-	return dial(netmkaddr(authserver, "tcp", "ticket"), 0, 0, 0);
+	return dial(mkaddr(authserver, "tcp", "ticket"), 0, 0, 0);
 }
 
 static int

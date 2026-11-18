@@ -50,3 +50,6 @@ $(LIB): $(OFILES)
 
 devaudio-haiku.$O: devaudio-haiku.cpp
 	$(CXX) $(CFLAGS) $<
+
+wasm.$O: posix.$O
+	cp $^ $@

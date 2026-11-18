@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>drawterm</title>
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+        font: 14px monospace;
+    }
+
+    header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background: #ddd;
+    }
+
+    header strong {
+        margin-right: 8px;
+    }
+
+    form {
+        display: flex;
+        flex: 1;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    input {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 8px; 
+        font: inherit;
+    }
+
+    button {
+        padding: 6px 16px;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    main {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    canvas {
+        display: block;
+        cursor: none;
+        width: 100%;
+        height: 100%;
+        outline: none;
+        image-rendering: pixelated;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <strong>drawterm</strong>
+
+    <form id="connect">
+        <input
+            id="args"
+            type="text"
+            placeholder="-h host -u user -9"
+            spellcheck="false"
+            autocomplete="off"
+        >
+        <button type="submit">Run</button>
+    </form>
+</header>
+
+<main>
+    <canvas id="canvas" tabindex="0"></canvas>
+</main>
+
+<script>
+const params = new URLSearchParams(location.search);
+const form = document.getElementById("connect");
+const input = document.getElementById("args");
+const canvas = document.getElementById("canvas");
+
+canvas.addEventListener("contextmenu", event => {
+    event.preventDefault();
+});
+
+input.value = params.get("args") || "";
+
+form.addEventListener("submit", event => {
+    event.preventDefault();
+
+    const url = new URL(location.href);
+    const args = input.value.trim();
+
+    if (args)
+        url.searchParams.set("args", args);
+    else
+        url.searchParams.delete("args");
+
+    location.href = url.href;
+});
+
+function parseArgs(command) {
+    const args = [];
+    let arg = "", quote = "";
+
+    for (let i = 0; i < command.length; i++) {
+        const c = command[i];
+
+        if (c === quote) {
+            quote = "";
+        } else if (!quote && (c === '"' || c === "'")) {
+            quote = c;
+        } else if (!quote && /\s/.test(c)) {
+            if (arg) args.push(arg), arg = "";
+        } else if (c === "\\" && i + 1 < command.length) {
+            arg += command[++i];
+        } else {
+            arg += c;
+        }
+    }
+
+    if (arg)
+        args.push(arg);
+
+    return args;
+}
+
+if (params.has("args")) {
+    try {
+        const args = parseArgs(params.get("args"));
+
+        /*
+         * Emscripten reads Module.arguments when starting main().
+         * This must be initialized before drawterm.js loads.
+         */
+        window.Module = {
+            arguments: args,
+            canvas: document.getElementById("canvas"),
+            print: text => console.log(text),
+            printErr: text => console.error(text)
+        };
+
+        const script = document.createElement("script");
+        script.src = "drawterm.js";
+        document.body.appendChild(script);
+    } catch (e) {
+        console.error(e);
+        alert(e.message);
+    }
+}
+</script>
+
+</body>
+</html>
+
